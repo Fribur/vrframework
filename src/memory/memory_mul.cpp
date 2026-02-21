@@ -25,7 +25,7 @@ namespace memory {
         }
 #else
         spdlog::info("Using static offset for VTable id={}", hook_name);
-        val =  static_offset + (uintptr_t)mod;
+        val =  static_offset + (uintptr_t)g_mod;
 #endif
         return val;
     };
@@ -50,7 +50,7 @@ namespace memory {
         }
 #else
         spdlog::info("Using static offset for VTable id={}", hook_name);
-        val =  static_offset + (uintptr_t)mod;
+        val =  static_offset + (uintptr_t)g_mod;
 #endif
         return val;
     };
@@ -72,7 +72,7 @@ namespace memory {
         }
 #else
         spdlog::info("Using static offset for VTable id={}", hook_name);
-        val = static_offset + (uintptr_t)mod;
+        val = static_offset + (uintptr_t)g_mod;
 #endif
         return val;
     };
