@@ -2,7 +2,7 @@
 #include "sl_consts.h"
 #include <glm/ext/matrix_transform.hpp>
 #include <mods/vr/runtimes/OpenXR.hpp>
-#include <sl_matrix_helpers.h>
+#include <math/sl_matrix_helpers_copy.h>
 
 namespace GlobalPool
 {
@@ -19,12 +19,11 @@ namespace GlobalPool
         vectorNormalize(cameraFwd);
         vectorCrossProduct(cameraUp, cameraFwd, cameraRight);
         vectorNormalize(cameraUp);
-        float4x4 cameraViewToWorld = {
-            float4(cameraRight.x, cameraRight.y, cameraRight.z, 0.f),
-            float4(cameraUp.x,    cameraUp.y,    cameraUp.z,    0.f),
-            float4(cameraFwd.x,   cameraFwd.y,   cameraFwd.z,   0.f),
-            float4(cameraPos.x,   cameraPos.y,   cameraPos.z,   1.f)
-        };
+        float4x4 cameraViewToWorld = {};
+        cameraViewToWorld[0] = float4(cameraRight.x, cameraRight.y, cameraRight.z, 0.f);
+        cameraViewToWorld[1] = float4(cameraUp.x,    cameraUp.y,    cameraUp.z,    0.f);
+        cameraViewToWorld[2] = float4(cameraFwd.x,   cameraFwd.y,   cameraFwd.z,   0.f);
+        cameraViewToWorld[3] = float4(cameraPos.x,   cameraPos.y,   cameraPos.z,   1.f);
         return cameraViewToWorld;
     }
 

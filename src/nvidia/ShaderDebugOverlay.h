@@ -51,8 +51,6 @@ public:
         m_image1.Reset();
         m_motion_vector_buffer[0].Reset();
         m_motion_vector_buffer[1].Reset();
-        m_motion_vector_buffer[2].Reset();
-        m_motion_vector_buffer[3].Reset();
     }
 
     ShaderDebugOverlay() = default;
@@ -100,7 +98,7 @@ public:
     }
 
 
-    static bool ValidateResource(ID3D12Resource* source, ComPtr<ID3D12Resource> buffers[4]);
+    static bool ValidateResource(ID3D12Resource* source, ComPtr<ID3D12Resource> buffers[2]);
 
 
     static void CopyResource(ID3D12GraphicsCommandList* cmdList, ID3D12Resource* pSrcResource, ID3D12Resource* pDstResource, D3D12_RESOURCE_STATES srcState,
@@ -114,10 +112,10 @@ public:
 
 private:
     enum SRV_HEAP : unsigned int {
-        MVEC = 0,
-        DEPTH = MVEC + 1,
-        MVEC_PROCESSED = DEPTH + 1,
-        COUNT = MVEC_PROCESSED + 1
+        MVEC_LEFT  = 0,
+        MVEC_RIGHT = 1,
+        MVEC_PROCESSED = 2,
+        COUNT = 3
     };
 
     bool CreateRootSignature(ID3D12Device *device);
@@ -132,7 +130,7 @@ private:
     ComPtr<ID3D12Resource> m_image1{ nullptr};
 
 public:
-    ComPtr<ID3D12Resource> m_motion_vector_buffer[4]{};
+    ComPtr<ID3D12Resource> m_motion_vector_buffer[2]{};
 private:
     
     UINT m_debug_width{0};

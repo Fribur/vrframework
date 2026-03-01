@@ -171,7 +171,7 @@ void UpscalerFsr31Module::ReprojectMotionVectors(ffxDispatchDescUpscale* upscale
         static auto shader_debug_overlay = ShaderDebugOverlay::Get();
         if(DebugUtils::config.debugShaders && ShaderDebugOverlay::ValidateResource(mv_native_resource, shader_debug_overlay->m_motion_vector_buffer)) {
             ShaderDebugOverlay::SetMvecScale(upscalerDesc->motionVectorScale.x / (float)mvTag.description.width , upscalerDesc->motionVectorScale.y / (float)mvTag.description.height);
-            ShaderDebugOverlay::CopyResource(command_list, mv_native_resource, shader_debug_overlay->m_motion_vector_buffer[vr->m_render_frame_count % 4].Get(), mv_state, D3D12_RESOURCE_STATE_GENERIC_READ);
+            ShaderDebugOverlay::CopyResource(command_list, mv_native_resource, shader_debug_overlay->m_motion_vector_buffer[vr->m_render_frame_count % 2].Get(), mv_state, D3D12_RESOURCE_STATE_GENERIC_READ);
         }
 #endif
     }

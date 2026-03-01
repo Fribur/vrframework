@@ -66,6 +66,10 @@ file(
 add_library(${PROJECT_NAME} STATIC ${headers} ${sources})
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
+if(_STREAMLINE_VERSION_MAJOR LESS 2)
+  target_compile_definitions(${PROJECT_NAME} PUBLIC STREAMLINE_LEGACY)
+endif()
+
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 #find_path(DIRECTX_INCLUDE_DIR d3dcompiler.h)
 #find_library(D3D_COMPILER_LIB d3dcompiler.lib)

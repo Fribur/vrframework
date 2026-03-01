@@ -37,9 +37,9 @@ namespace d3d12
     struct SmallRingPool
     {
         RingResource srv_pool[MAX_SMALL_RING_POOL_SIZE]{};
-        int current_srv_pool_index{0};
+        int current_srv_pool_index{-1};
         RingResource uav_pool[MAX_SMALL_RING_POOL_SIZE]{};
-        int current_uav_pool_index{0};
+        int current_uav_pool_index{-1};
         std::unique_ptr<DescriptorHeap> m_compute_heap{};
         ID3D12Device* m_pDevice{nullptr};
 
@@ -54,11 +54,11 @@ namespace d3d12
             for (auto& res : srv_pool) {
                 res.Reset();
             }
-            current_srv_pool_index = 0;
+            current_srv_pool_index = -1;
             for (auto& res : uav_pool) {
                 res.Reset();
             }
-            current_uav_pool_index = 0;
+            current_uav_pool_index = -1;
             m_compute_heap.reset();
             m_pDevice = nullptr;
 

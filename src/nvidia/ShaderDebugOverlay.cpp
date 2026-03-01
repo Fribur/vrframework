@@ -38,7 +38,7 @@ bool ShaderDebugOverlay::CreateRootSignature(ID3D12Device* device)
     CD3DX12_DESCRIPTOR_RANGE1 descriptorRange[1];
     CD3DX12_ROOT_PARAMETER1 rootParams[2];
 
-    descriptorRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, SRV_HEAP::COUNT, 0, 0);
+    descriptorRange[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
     rootParams[0].InitAsDescriptorTable(1, &descriptorRange[0], D3D12_SHADER_VISIBILITY_PIXEL);
     rootParams[1].InitAsConstants(CONSTANTS_COUNT, 0, 0, D3D12_SHADER_VISIBILITY_ALL);
     CD3DX12_STATIC_SAMPLER_DESC staticSamplers[2];
@@ -139,46 +139,14 @@ void ShaderDebugOverlay::Draw(ID3D12GraphicsCommandList* commandList, ID3D12Reso
     const auto render_target_desc = resource->GetDesc();
 
     {
-        D3D12_RESOURCE_BARRIER barriers[5]
+        D3D12_RESOURCE_BARRIER barriers[3]
         {
             CD3DX12_RESOURCE_BARRIER::Transition(resource, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET),
-//            CD3DX12_RESOURCE_BARRIER::Transition(mvReprojection.m_motion_vector_buffer[3].Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
             CD3DX12_RESOURCE_BARRIER::Transition(m_motion_vector_buffer[0].Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
             CD3DX12_RESOURCE_BARRIER::Transition(m_motion_vector_buffer[1].Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
-            CD3DX12_RESOURCE_BARRIER::Transition(m_motion_vector_buffer[2].Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
-            CD3DX12_RESOURCE_BARRIER::Transition(m_motion_vector_buffer[3].Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
-//            CD3DX12_RESOURCE_BARRIER::Transition(m_depth_buffer[0].Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
-//            CD3DX12_RESOURCE_BARRIER::Transition(m_depth_buffer[1].Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
         };
-        commandList->ResourceBarrier(5, barriers);
+        commandList->ResourceBarrier(3, barriers);
     }
-
-    float clear_color[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
-
-//    const auto& depthDesc      = m_depth_buffer[0]->GetDesc();
-//    auto depth_srv_desc = getSRVdesc1(depthDesc);
-    static auto vr = VR::get();
-    const auto& mvectorDesc = m_motion_vector_buffer[vr->m_render_frame_count % 4]->GetDesc();
-    auto mvector_srv_desc = getSRVdesc1(mvectorDesc);
-
-    auto modulo_frame = vr->m_render_frame_count % 2 == 0 ? 0 : -1;
-
-    device->CreateShaderResourceView(m_motion_vector_buffer[(vr->m_render_frame_count + modulo_frame)% 4].Get(), &mvector_srv_desc, m_srv_heap->GetCpuHandle(SRV_HEAP::MVEC));
-//    device->CreateShaderResourceView(mvReprojection->m_depth_buffer[0].Get(), &depth_srv_desc, m_debug_heap->GetCpuHandle(SRV_HEAP::DEPTH));
-//    device->CreateShaderResourceView(mvReprojection->m_motion_vector_buffer[2].Get(), &mvector_srv_desc, m_debug_heap->GetCpuHandle(SRV_HEAP::MVEC_PROCESSED));
-
-    D3D12_VIEWPORT viewport{};
-    viewport.Width    = (float)m_debug_width;
-    viewport.Height   = (float)m_debug_height;
-    viewport.MinDepth = D3D12_MIN_DEPTH;
-    viewport.MaxDepth = D3D12_MAX_DEPTH;
-
-    D3D12_RECT scissor_rect{};
-    scissor_rect.left   = 0;
-    scissor_rect.top    = 0;
-    scissor_rect.right  = (LONG)m_debug_width;
-    scissor_rect.bottom = (LONG)m_debug_height;
-
 
     static ShaderConstants constants{};
     constants.scale = m_scale;
@@ -186,44 +154,45 @@ void ShaderDebugOverlay::Draw(ID3D12GraphicsCommandList* commandList, ID3D12Reso
     constants.show_abs = m_show_abs ? 1 : 0;
     constants.mvecScale = mvecScale;
 
-    commandList->SetPipelineState(m_debug_layer_pso.Get());
-//    commandList->ClearRenderTargetView(*rtv_handle, clear_color, 1, &scissor_rect);
-    commandList->OMSetRenderTargets(1, rtv_handle, FALSE, nullptr);
+    const UINT half_width = m_debug_width / 2;
 
-    // Clear the render target within the scissor rectangle
-    commandList->RSSetViewports(1, &viewport);
-    commandList->RSSetScissorRects(1, &scissor_rect);
+    commandList->SetPipelineState(m_debug_layer_pso.Get());
+    commandList->OMSetRenderTargets(1, rtv_handle, FALSE, nullptr);
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-
     commandList->SetGraphicsRoot32BitConstants(1, CONSTANTS_COUNT, &constants, 0);
-
-    ID3D12DescriptorHeap* descriptorHeaps[] = { m_srv_heap->Heap()
-    };
+    ID3D12DescriptorHeap* descriptorHeaps[] = { m_srv_heap->Heap() };
     commandList->SetDescriptorHeaps(1, descriptorHeaps);
-    commandList->SetGraphicsRootDescriptorTable(0, m_srv_heap->GetFirstGpuHandle());
 
-    // Draw the quad
+    // Left half — left eye
+    D3D12_VIEWPORT leftVP{ 0.f, 0.f, (float)half_width, (float)m_debug_height, D3D12_MIN_DEPTH, D3D12_MAX_DEPTH };
+    D3D12_RECT     leftSR{ 0, 0, (LONG)half_width, (LONG)m_debug_height };
+    commandList->RSSetViewports(1, &leftVP);
+    commandList->RSSetScissorRects(1, &leftSR);
+    commandList->SetGraphicsRootDescriptorTable(0, m_srv_heap->GetGpuHandle(SRV_HEAP::MVEC_LEFT));
+    commandList->DrawInstanced(6, 1, 0, 0);
+
+    // Right half — right eye
+    D3D12_VIEWPORT rightVP{ (float)half_width, 0.f, (float)half_width, (float)m_debug_height, D3D12_MIN_DEPTH, D3D12_MAX_DEPTH };
+    D3D12_RECT     rightSR{ (LONG)half_width, 0, (LONG)m_debug_width, (LONG)m_debug_height };
+    commandList->RSSetViewports(1, &rightVP);
+    commandList->RSSetScissorRects(1, &rightSR);
+    commandList->SetGraphicsRootDescriptorTable(0, m_srv_heap->GetGpuHandle(SRV_HEAP::MVEC_RIGHT));
     commandList->DrawInstanced(6, 1, 0, 0);
 
     {
-        D3D12_RESOURCE_BARRIER barriers[5]
+        D3D12_RESOURCE_BARRIER barriers[3]
         {
             CD3DX12_RESOURCE_BARRIER::Transition(resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE),
-//            CD3DX12_RESOURCE_BARRIER::Transition(mvReprojection.m_motion_vector_buffer[3].Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_GENERIC_READ),
             CD3DX12_RESOURCE_BARRIER::Transition(m_motion_vector_buffer[0].Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_GENERIC_READ),
             CD3DX12_RESOURCE_BARRIER::Transition(m_motion_vector_buffer[1].Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_GENERIC_READ),
-            CD3DX12_RESOURCE_BARRIER::Transition(m_motion_vector_buffer[2].Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_GENERIC_READ),
-            CD3DX12_RESOURCE_BARRIER::Transition(m_motion_vector_buffer[3].Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_GENERIC_READ),
-//            CD3DX12_RESOURCE_BARRIER::Transition(mvReprojection.m_depth_buffer[0].Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_GENERIC_READ),
-//            CD3DX12_RESOURCE_BARRIER::Transition(mvReprojection.m_depth_buffer[1].Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_GENERIC_READ)
         };
-        commandList->ResourceBarrier(5, barriers);
+        commandList->ResourceBarrier(3, barriers);
     }
 }
 
 
-bool ShaderDebugOverlay::ValidateResource(ID3D12Resource* source, ComPtr<ID3D12Resource> buffers[4])
+bool ShaderDebugOverlay::ValidateResource(ID3D12Resource* source, ComPtr<ID3D12Resource> buffers[2])
 {
     if (source == nullptr) {
         return false;
@@ -236,18 +205,16 @@ bool ShaderDebugOverlay::ValidateResource(ID3D12Resource* source, ComPtr<ID3D12R
                          desc2.Height, desc2.Format);
             buffers[0].Reset();
             buffers[1].Reset();
-            buffers[2].Reset();
-            buffers[3].Reset();
         }
     }
     auto device = g_framework->get_d3d12_hook()->get_device();
     if (device == nullptr) {
         return false;
     }
-    if (buffers[0] == nullptr || buffers[1] == nullptr || buffers[2] == nullptr || buffers[3] == nullptr) {
+    if (buffers[0] == nullptr || buffers[1] == nullptr) {
         D3D12_HEAP_PROPERTIES heap_props = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-        spdlog::info("[VR] Creating resource copy for AFR motion vetor backbuffer. format={}", desc.Format);
-        for (int i = 0; i < 4; i++) {
+        spdlog::info("[VR] Creating resource copy for AFR motion vector backbuffer. format={}", desc.Format);
+        for (int i = 0; i < 2; i++) {
             HRESULT hr = device->CreateCommittedResource(&heap_props, D3D12_HEAP_FLAG_NONE, &desc,
                                                          D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
                                                          IID_PPV_ARGS(buffers[i].GetAddressOf()));
@@ -256,6 +223,12 @@ bool ShaderDebugOverlay::ValidateResource(ID3D12Resource* source, ComPtr<ID3D12R
                 spdlog::error("[VR] Failed to create resource {} HRESULT: 0x{:X}", desc.Format, static_cast<unsigned int>(hr));
                 return false;
             }
+        }
+        auto& instance = *Get();
+        if (instance.m_srv_heap) {
+            auto srv_desc = getSRVdesc1(desc);
+            device->CreateShaderResourceView(buffers[0].Get(), &srv_desc, instance.m_srv_heap->GetCpuHandle(SRV_HEAP::MVEC_LEFT));
+            device->CreateShaderResourceView(buffers[1].Get(), &srv_desc, instance.m_srv_heap->GetCpuHandle(SRV_HEAP::MVEC_RIGHT));
         }
     }
     return true;
@@ -304,8 +277,8 @@ bool ShaderDebugOverlay::setup(ID3D12Device* device, D3D12_RESOURCE_DESC& backBu
         return false;
     }
     
-    // Create debug texture at half resolution
-    m_debug_width = (UINT)backBufferDesc.Width / 2;
+    // Create debug texture: full width (both eyes side by side), half height
+    m_debug_width = (UINT)backBufferDesc.Width;
     m_debug_height = (UINT)backBufferDesc.Height / 2;
     
     D3D12_RESOURCE_DESC texDesc{};
