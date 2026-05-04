@@ -3,7 +3,10 @@ include(FetchContent)
 FetchContent_Declare(
         minhook
         GIT_REPOSITORY https://github.com/TsudaKageyu/minhook.git
-        GIT_TAG        98b74f1fc12d00313d91f10450e5b3e0036175e3
+        GIT_TAG "v1.3.4"
+        # apply patch
+        PATCH_COMMAND powershell -File "${CMAKE_CURRENT_SOURCE_DIR}/patches/fix_minhook.ps1"
+        #GIT_TAG        98b74f1fc12d00313d91f10450e5b3e0036175e3
         GIT_PROGRESS TRUE
 )
 message("MinHook")

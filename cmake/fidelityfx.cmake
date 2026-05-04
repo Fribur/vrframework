@@ -4,8 +4,9 @@ include(FetchContent)
 FetchContent_Declare(
         fidelityfx
         GIT_REPOSITORY "https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK.git"
-        GIT_TAG "v1.1.4"
+        GIT_TAG "v2.2.0"
+        #GIT_TAG "v1.1.4"
 )
 message("Fetching FidelityFX SDK (headers only)")
-FetchContent_Populate(fidelityfx)
+FetchContent_MakeAvailable(fidelityfx)
 

@@ -6,20 +6,21 @@ if(NOT POLYHOOK2_FUNCTION_HOOK)
 endif()
 message("Fetching safetyhook")
 
-message(STATUS "Fetching xbyak (v6.69)...")
+message(STATUS "Fetching xbyak (v7.30)...")
 FetchContent_Declare(xbyak
         GIT_REPOSITORY
         "https://github.com/herumi/xbyak.git"
-        GIT_TAG
-        v6.69
-        GIT_SHALLOW
-        ON
+        GIT_TAG "v7.30"
+        GIT_SHALLOW ON
 )
 
 FetchContent_Declare(
         safetyhook
         GIT_REPOSITORY "https://github.com/cursey/safetyhook.git"
-        GIT_TAG "bb8857590f59c132f02e66c5c4ef28158732f21c"
+        GIT_TAG "v0.6.9"
+        #patch
+        PATCH_COMMAND powershell -ExecutionPolicy Bypass -File "${CMAKE_CURRENT_SOURCE_DIR}/patches/fix_safetyhook.ps1"
+        #GIT_TAG "bb8857590f59c132f02e66c5c4ef28158732f21c"
 )
 
 FetchContent_MakeAvailable(xbyak)

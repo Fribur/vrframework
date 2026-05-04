@@ -14,8 +14,13 @@ set(CMAKE_CXX_STANDARD 23)
 
 include(GNUInstallDirs)
 
-# Streamline version configuration
-set(STREAMLINE_VERSION "v2.4.15" CACHE STRING "Version of NVIDIA Streamline to use")
+# Streamline configuration
+set(STREAMLINE_TARGET_ARCH "x64" CACHE STRING "")
+set(STREAMLINE_SDK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/streamline" CACHE STRING "SL SDK Root Directory")
+cmake_policy(PUSH)
+cmake_policy(SET CMP0175 OLD)
+add_subdirectory(${STREAMLINE_SDK_ROOT})
+cmake_policy(POP)
 
 option(INVERT_DEPTH_IN_SHADER "Invert depth in motion vector correction shader" OFF)
 
@@ -38,7 +43,6 @@ include("cmake/safetyhook.cmake")
 include("cmake/kananlib.cmake")
 include("cmake/directxtk.cmake")
 include("cmake/openxr.cmake")
-include("cmake/streamline.cmake")
 include("cmake/imgui.cmake")
 include("cmake/fidelityfx.cmake")
 
@@ -65,10 +69,6 @@ file(
 
 add_library(${PROJECT_NAME} STATIC ${headers} ${sources})
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-
-if(_STREAMLINE_VERSION_MAJOR LESS 2)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC STREAMLINE_LEGACY)
-endif()
 
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 #find_path(DIRECTX_INCLUDE_DIR d3dcompiler.h)
@@ -114,8 +114,9 @@ target_include_directories(
 #    ${imgui_SOURCE_DIR}
     "extern/openvr/headers"
 #    "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui"
-    $<BUILD_INTERFACE:${streamline_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${fidelityfx_SOURCE_DIR}/ffx-api/include>
+    $<BUILD_INTERFACE:${STREAMLINE_SDK_ROOT}/include>
+    $<BUILD_INTERFACE:${fidelityfx_SOURCE_DIR}/Kits/FidelityFX/api/include>
+    $<BUILD_INTERFACE:${fidelityfx_SOURCE_DIR}/Kits/FidelityFX/upscalers/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 )

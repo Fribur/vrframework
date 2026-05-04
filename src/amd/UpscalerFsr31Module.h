@@ -3,8 +3,8 @@
 #include <Mod.hpp>
 #include <memory/FunctionHook.h>
 #include <mods/VR.hpp>
-#include <ffx_api/ffx_api.h>
-#include <ffx_api/ffx_upscale.h>
+#include <ffx_api.h>
+#include <ffx_upscale.h>
 #include <d3d12.h>
 #include <mutex>
 #include <nvidia/MotionVectorReprojection.h>
